@@ -6,7 +6,6 @@ A simple web-based chat application built with Go. This project serves static fi
 - Web chat interface
 - Static file serving (HTML, CSS, JS)
 - Go backend
-- Basic unit tests
 
 ## Getting Started
 
@@ -17,7 +16,7 @@ A simple web-based chat application built with Go. This project serves static fi
 1. Clone the repository:
    ```bash
    git clone <repo-url>
-   cd LLaMA3-Web-Chat
+   cd LLaMA3-Web-Chat/webchat
    ```
 2. Install dependencies:
    ```bash
@@ -30,21 +29,14 @@ go run main.go
 ```
 The server will start and serve the chat interface at `http://localhost:8080` (default).
 
-### Running Tests
-```bash
-go test
-```
-
 ### Project Structure
 ```
-LLaMA3-Web-Chat/
-  go.mod         # Go module definition
-  go.sum         # Go dependencies
-  main.go        # Main server code
-  main_test.go   # Unit tests
+webchat/
+  go.mod        # Go module definition
+  go.sum        # Go dependencies
+  main.go       # Main server code
   static/
-    index.html   # Chat frontend
-  README.md      # Project documentation
+    index.html  # Chat frontend
 ```
 
 ## License
