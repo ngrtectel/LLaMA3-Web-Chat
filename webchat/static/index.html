@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLaMA3 Web Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+        #chat-container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #ccc; padding: 24px; }
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 12px; margin-bottom: 16px; background: #fafafa; transition: background 0.3s; }
+        .msg { margin-bottom: 12px; opacity: 0; transform: translateY(20px); animation: fadeInUp 0.4s forwards; }
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: none; }
+        }
+        .user { color: #007bff; }
+        .bot { color: #333; }
+        #input-area { display: flex; }
+        #message { flex: 1; padding: 8px; font-size: 16px; }
+        #send { padding: 8px 16px; font-size: 16px; }
+        #loading { display: none; margin: 0 auto 16px auto; text-align: center; color: #888; }
+        .dot { animation: blink 1.2s infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <h2>LLaMA3 Web Chat</h2>
+        <div id="messages"></div>
+        <div id="loading"><span class="dot">●</span><span class="dot">●</span><span class="dot">●</span> LLaMA3 is thinking...</div>
+        <div id="input-area">
+            <input type="text" id="message" placeholder="Type your message..." />
+            <button id="send">Send</button>
+        </div>
+    </div>
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('message');
+        const sendBtn = document.getElementById('send');
+        const loadingDiv = document.getElementById('loading');
+
+        function addMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'msg ' + sender;
+            msgDiv.textContent = sender === 'user' ? 'You: ' + text : 'LLaMA3: ' + text;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessageStream() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            addMessage(text, 'user');
+            messageInput.value = '';
+            loadingDiv.style.display = 'block';
+            sendBtn.disabled = true;
+            messageInput.disabled = true;
+            let botMsgDiv = document.createElement('div');
+            botMsgDiv.className = 'msg bot';
+            botMsgDiv.textContent = 'LLaMA3: ';
+            messagesDiv.appendChild(botMsgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            // 1. Send prompt and get id
+            const promptRes = await fetch('/api/chat-prompt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const promptData = await promptRes.json();
+            const id = promptData.id;
+            // 2. Open SSE stream with id
+            const evtSource = new EventSource('/api/chat-stream?id=' + id);
+            evtSource.onmessage = function(event) {
+                botMsgDiv.textContent += event.data;
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            };
+            evtSource.onerror = function() {
+                evtSource.close();
+                loadingDiv.style.display = 'none';
+                sendBtn.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
+            };
+        }
+
+        sendBtn.onclick = sendMessageStream;
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') sendMessageStream();
+        });
+    </script>
+</body>
+</html>
